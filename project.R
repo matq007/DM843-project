@@ -27,7 +27,7 @@ for (i in 1:1){
     b_a <- my.data[my.data$protein1 == b & my.data$protein2 == a, ]
     
     if (nrow(a_b) == 0) {
-      
+       
     }
     
     if (nrow(b_a) == 0) {
@@ -38,3 +38,34 @@ for (i in 1:1){
   }
   
 }
+####### updated it Friday
+work.data$Corrected <- -log(work.data$Corrected)
+
+# Build in Similarity Matrix
+
+similarity.matrix <- function(x) {
+  #implementing a matrix full of zeros
+  simis <- matrix(0, nrow = length(unique(work.data$Query)),
+                  ncol = length(unique(work.data$Query)))
+  #rename the rows and columns by the names of A and B protein
+  colnames(simis) <- unique(work.data$Query)
+  rownames(simis) <- unique(work.data$Target)
+  
+  #loop all over to keep the best results
+  for(i in 1:nrow(x))
+  {
+    query = x$Query[i]
+    target = x$Target[i]
+    current = simis[query,target]
+    similarity = x$Corrected[i]
+    
+    if(current < similarity) 
+    {
+      simis[query,target] = similarity
+    }
+  }
+  return(simis)
+}
+my.matrix = similarity.matrix(work.data)
+
+

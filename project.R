@@ -13,59 +13,16 @@ colnames(my.data) <- c("protein1", "protein2", "E-value", "corrected")
 # Build similarity matrix
 proteins <- as.matrix(read.table("all_proteins_names.txt", header = FALSE))
 similarity_n <- length(proteins)
-similarity <- matrix(0, nrow = similarity_n, ncol = similarity_n)
+similarity <- matrix(Inf, nrow = similarity_n, ncol = similarity_n)
 colnames(similarity) <- proteins
 rownames(similarity) <- proteins
 
-#for (i in 1:nrow(proteins)){
-for (i in 1:1){
-  a <- as.factor(proteins[i,])
-  for (j in 1:nrow(proteins)) {
-    b <- as.factor(proteins[j,])
-
-    a_b <- my.data[my.data$protein1 == a & my.data$protein2 == b, ]
-    b_a <- my.data[my.data$protein1 == b & my.data$protein2 == a, ]
-    
-    if (nrow(a_b) == 0) {
-       
-    }
-    
-    if (nrow(b_a) == 0) {
-      
-    }
-  
-    
-  }
-  
+for (i in 1:nrow(my.data)) {
+  index <- my.data[i, ]
+  tmp_i = as.character(index$protein1)
+  tmp_j = as.character(index$protein2)
+  similarity[tmp_i, tmp_j] <- min(index$corrected, similarity[tmp_i, tmp_j])
 }
-####### updated it Friday
-my.data$corrected <- -log(my.data$corrected)
 
-# Build in Similarity Matrix
-
-similarity.matrix <- function(x) {
-  #implementing a matrix full of zeros
-  simis <- matrix(0, nrow = length(unique(my.data$Query)),
-                  ncol = length(unique(my.data$Query)))
-  #rename the rows and columns by the names of A and B protein
-  colnames(simis) <- unique(my.data$protein1)
-  rownames(simis) <- unique(my.data$protein2)
-  
-  #loop all over to keep the best results
-  for(i in 1:nrow(x))
-  {
-    query = x$protein1[i]
-    target = x$protein2[i]
-    current = simis[query,target]
-    similarity = x$corrected[i]
-    
-    if(current < similarity) 
-    {
-      simis[query,target] = similarity
-    }
-  }
-  return(simis)
-}
-my.matrix = similarity.matrix(my.data)
-
-
+# Clustering algorithms
+load("workspace.RData")

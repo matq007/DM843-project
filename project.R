@@ -39,25 +39,25 @@ for (i in 1:1){
   
 }
 ####### updated it Friday
-work.data$Corrected <- -log(work.data$Corrected)
+my.data$corrected <- -log(my.data$corrected)
 
 # Build in Similarity Matrix
 
 similarity.matrix <- function(x) {
   #implementing a matrix full of zeros
-  simis <- matrix(0, nrow = length(unique(work.data$Query)),
-                  ncol = length(unique(work.data$Query)))
+  simis <- matrix(0, nrow = length(unique(my.data$Query)),
+                  ncol = length(unique(my.data$Query)))
   #rename the rows and columns by the names of A and B protein
-  colnames(simis) <- unique(work.data$Query)
-  rownames(simis) <- unique(work.data$Target)
+  colnames(simis) <- unique(my.data$protein1)
+  rownames(simis) <- unique(my.data$protein2)
   
   #loop all over to keep the best results
   for(i in 1:nrow(x))
   {
-    query = x$Query[i]
-    target = x$Target[i]
+    query = x$protein1[i]
+    target = x$protein2[i]
     current = simis[query,target]
-    similarity = x$Corrected[i]
+    similarity = x$corrected[i]
     
     if(current < similarity) 
     {
@@ -66,6 +66,6 @@ similarity.matrix <- function(x) {
   }
   return(simis)
 }
-my.matrix = similarity.matrix(work.data)
+my.matrix = similarity.matrix(my.data)
 
 

@@ -1,3 +1,10 @@
+
+install.package("fpc")
+
+# READ GOLD STANDARD
+gold.standard <- read.table("gold_standard.txt", header = FALSE, sep = "\t")
+colnames(gold.standard)<- c("protein","family")
+
 # READ FILE
 my.dataset <- read.table("all-vs-all.tsv", header = FALSE, sep = "\t")
 
@@ -35,9 +42,16 @@ dij <- dist(scale(similarity, center = TRUE, scale = TRUE))
 clust <- hclust(dij, method = "average")
 family <- NULL
 family <- cbind(proteins)
-family <- cbind(family, cutree(clust, 500))
+family <- cbind(family, cutree(clust, 30))
 family <- as.data.frame(family)
 colnames(family) <- c("protein", "class")
+
+#Make clusters groups from gold standard 
+
+#Compare results to golden standard on proteins we have 
+comparison <- merge(gold.standard, family, by="protein")
+
+cluster.stats(family, gold.standard)
 
 #Spectral Clust
 # edges connecting different clusters should have low weigths

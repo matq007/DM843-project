@@ -13,7 +13,7 @@ colnames(my.data) <- c("protein1", "protein2", "E-value", "corrected")
 # Build similarity matrix
 proteins <- as.matrix(read.table("all_proteins_names.txt", header = FALSE))
 similarity_n <- length(proteins)
-similarity <- matrix(Inf, nrow = similarity_n, ncol = similarity_n)
+similarity <- matrix(max(my.data$corrected), nrow = similarity_n, ncol = similarity_n)
 colnames(similarity) <- proteins
 rownames(similarity) <- proteins
 
@@ -24,5 +24,18 @@ for (i in 1:nrow(my.data)) {
   similarity[tmp_i, tmp_j] <- min(index$corrected, similarity[tmp_i, tmp_j])
 }
 
+similarity <- -log(similarity)
+
 # Clustering algorithms
-load("workspace.RData")
+#save.image("workspace.RData")
+# plot(c(similarity))
+
+dij <- dist(scale(similarity, center = TRUE, scale = TRUE))
+clust <- hclust(dij, method = "average")
+family <- NULL
+family <- cbind(proteins)
+family <- cbind(family, cutree(clust, 500))
+family <- as.data.frame(family)
+colnames(family) <- c("protein", "class")
+
+clusplot(family$protein, family$class)

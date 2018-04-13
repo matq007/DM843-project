@@ -7,6 +7,10 @@ colnames(gold.standard)<- c("protein","family")
 
 # READ FILE
 my.dataset <- read.table("all-vs-all.tsv", header = FALSE, sep = "\t")
+my.gs <- read.table("gold_standard.txt", header = FALSE, sep = "\t")
+my.gs <- cbind(my.gs, unlist(lapply(my.gs$V2, function (x) return (unlist(strsplit(as.character(x), "_"))[2]))))
+my.gs <- my.gs[,-2]
+colnames(my.gs) <- c("protein", "class")
 
 my.data <- data.frame(my.dataset$V1, my.dataset$V2, my.dataset$V11)
 colnames(my.data) <- c("protein1", "protein2", "E-value")

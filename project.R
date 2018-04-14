@@ -1,24 +1,31 @@
-# READ GOLD STANDARD
+# Mini project - Unsupervised learning
+library("igraph")
+library("MCL")
+
+
+#####################################################################################################################
+# DATA
 gold.standard <- read.table("gold_standard.txt", header = FALSE, sep = "\t")
 colnames(gold.standard)<- c("protein","family")
 
-# READ FILE
 my.dataset <- read.table("all-vs-all.tsv", header = FALSE, sep = "\t")
+my.data <- data.frame(my.dataset$V1, my.dataset$V2, my.dataset$V11)
+colnames(my.data) <- c("protein1", "protein2", "E-value")
+
 my.gs <- read.table("gold_standard.txt", header = FALSE, sep = "\t")
 my.gs <- cbind(my.gs, unlist(lapply(my.gs$V2, function (x) return (unlist(strsplit(as.character(x), "_"))[2]))))
 my.gs <- my.gs[,-2]
 colnames(my.gs) <- c("protein", "class")
 
-my.data <- data.frame(my.dataset$V1, my.dataset$V2, my.dataset$V11)
-colnames(my.data) <- c("protein1", "protein2", "E-value")
-
-# Correct for 0 
+# Correct for 0
+# Every 0 is replaced with 1e-200, which we consider as the highest significance
 tmp_small <- my.data$`E-value`
 corrected <- replace(tmp_small, tmp_small == 0, 1e-200)
 my.data <- cbind(my.data, corrected)
 colnames(my.data) <- c("protein1", "protein2", "E-value", "corrected")
 
-# Build similarity matrix
+#####################################################################################################################
+# BUILD SIMILARITY MATRIX
 proteins <- as.matrix(read.table("all_proteins_names.txt", header = FALSE))
 similarity_n <- length(proteins)
 similarity <- matrix(max(my.data$corrected), nrow = similarity_n, ncol = similarity_n)
@@ -33,109 +40,10 @@ for (i in 1:nrow(my.data)) {
 }
 
 #similarity <- -log(similarity)
-
-# Clustering algorithms
-#save.image("workspace.RData")
-# load("workspace.RData")
-# plot(c(similarity))
-
 #####################################################################################################################
-# Hierarchical clustering
+# SIMON'S CODE GOES HERE
 
-dij <- dist(scale(similarity, center = TRUE, scale = TRUE))
-clust <- hclust(dij, method = "average")
-family <- NULL
-family <- cbind(proteins)
-family <- cbind(family, cutree(clust, 300))
-family <- as.data.frame(family)
-colnames(family) <- c("protein", "class")
-
-
-#####################################################################################################################
-# HIDDNE MARKOV MODEL
-library(igraph)
-library("MCL")
-
-# tmp <- similarity[1:10, 1:10]
-tmp <- similarity
-tmp <- round(as.matrix(tmp))
-tmp <- replace(tmp, tmp <= 0, 1)
-tmp <- replace(tmp, tmp != 1, 0)
-
-adjacency <- graph.adjacency(as.matrix(tmp), diag = TRUE)
-# plot(adjacency)
-hmm <- mcl(x = tmp, addLoops = TRUE, ESM = TRUE, allow1 = TRUE, expansion = 1, inflation = 1)
-family2 <- NULL
-family2 <- cbind(proteins)
-family2 <- cbind(family2, hmm$Cluster)
-family2 <- as.data.frame(family2)
-colnames(family2) <- c("protein", "class")
-
-#Make clusters groups from gold standard 
-
-#Compare results to golden standard on proteins we have 
-comparison <- merge(my.gs, family, by="protein")
-colnames(comparison) <- c("protein","actuall_family", "predicted_family")
-
-family.gs <- family[family$protein %in% my.gs$protein,]
-
-#Fraction of predictions that are relevant 
-# (hits that are clustered in the same cluster)/(all hits)
-normalizeTable <- function(predictions, standard){
-  
-  #for each protein family we know in the standard
-  for(f in unique(standard$class)){
-    #get the proteins
-    proteins <- standard[standard$class == f,]
-     
-    # get the predictions for the protein family
-    proteins.clust <- predictions[predictions$protein %in% proteins$protein,] 
-    
-    # get the most occouring cluster in prediction familty
-    biggest.cluster <- tail(names(sort(table(proteins.clust$class))), 1)
-    
-    #Mark the small clusters as beeing wrong in the predict
-    predictions$class[(predictions$protein %in% proteins$protein) & (predictions$class != biggest.cluster)] <- NA
-    
-    #Correct the label for the biggest one to match the gold standard, the rest assume are wron
-    predictions$class[(predictions$protein %in% proteins$protein) & (predictions$class == biggest.cluster) & !is.na(predictions$class)] <- proteins$class
-  
-    }
-  
-  return (c(predictions, standard))
-} 
-
-precision <- function(predictions, standard){
-  
-  assumed.positive <- sum(!is.na(predictions$class))
-  total.predictions <- length(predictions$class)
-  
-  return(assumed.positive/total.count)
-}
-#Fraction of relevant instances that are retrieved
-recall <- function(predictions, standard){
-  
-  assumed.positive <- sum(!is.na(predictions$class))
-  total.true <- length(standard$class)
-  
-  return(assumed.positive.total.true)
-}
-
-f.score <- function(predictions,standard){
-  
-  normalize <- normalizeTable(predictions,standard)[1]
-  predictions <- normalize[1]
-  standard <- normalize[2]
-  
-  prec<- precision(predictions, standard)
-  rec <- recall(predictions, standard) 
-
-  return (2*prec*rec/prec+rec)
-  }
-
-score <- f.score(family.gs, my.gs)
-
-#Spectral Clust
+# Spectral Clust
 # edges connecting different clusters should have low weigths
 S <- similarity
 make.affinity <- function(S, n.neighboors=2) {
@@ -172,7 +80,7 @@ k   <- 2
 evL <- eigen(U, symmetric=TRUE)
 Z   <- evL$vectors[,(ncol(evL$vectors)-k+1):ncol(evL$vectors)]
 plot(Z, col=obj$classes, pch=20) # notice that all 50 points,
-                                 # of each cluster, are on top of each other
+# of each cluster, are on top of each other
 
 # find the apropoiate clusters
 library(stats)
@@ -190,3 +98,101 @@ sc <- specc(my.data, centers=2)
 plot(my.data, col=sc, pch=4)            # estimated classes (x)
 points(my.data, col=c(my.data$protein1, my.data$protein2), pch=5) # true classes (<>)
 
+#####################################################################################################################
+# HIERARCHICAL CLUSTERING
+
+k <- 300
+dij <- dist(scale(similarity, center = TRUE, scale = TRUE))
+clust <- hclust(dij, method = "average")
+family <- NULL
+family <- cbind(proteins)
+family <- cbind(family, cutree(clust, k))
+family <- as.data.frame(family)
+colnames(family) <- c("protein", "class")
+
+#####################################################################################################################
+# HIDDEN MARKOV MODEL
+
+tmp <- similarity
+tmp <- round(as.matrix(tmp))
+tmp <- replace(tmp, tmp <= 0, 1)
+tmp <- replace(tmp, tmp != 1, 0)
+
+adjacency <- graph.adjacency(as.matrix(tmp), diag = TRUE)
+# plot(adjacency)
+hmm <- mcl(x = tmp, addLoops = TRUE, ESM = TRUE, allow1 = TRUE, expansion = 1, inflation = 1)
+family2 <- NULL
+family2 <- cbind(proteins)
+family2 <- cbind(family2, hmm$Cluster)
+family2 <- as.data.frame(family2)
+colnames(family2) <- c("protein", "class")
+
+#####################################################################################################################
+# VALIDATION
+# Make clusters groups from gold standard 
+# Compare results to partial gold standard on the proteins we have 
+
+comparison <- merge(my.gs, family, by="protein")
+colnames(comparison) <- c("protein","actuall_family", "predicted_family")
+
+family.gs <- family[family$protein %in% my.gs$protein,]
+
+# Fraction of predictions that are relevant 
+# (hits that are clustered in the same cluster)/(all hits)
+normalizeTable <- function(predictions, standard){
+  
+  #for each protein family we know in the standard
+  for(f in unique(standard$class)){
+    #get the proteins
+    proteins <- standard[standard$class == f,]
+     
+    # get the predictions for the protein family
+    proteins.clust <- predictions[predictions$protein %in% proteins$protein,] 
+    
+    # get the most occouring cluster in prediction familty
+    biggest.cluster <- tail(names(sort(table(proteins.clust$class))), 1)
+    
+    #Mark the small clusters as beeing wrong in the predict
+    predictions$class[(predictions$protein %in% proteins$protein) & (predictions$class != biggest.cluster)] <- NA
+    
+    #Correct the label for the biggest one to match the gold standard, the rest assume are wron
+    predictions$class[(predictions$protein %in% proteins$protein) & (predictions$class == biggest.cluster) & !is.na(predictions$class)] <- proteins$class
+  
+    }
+  
+  return (c(predictions, standard))
+} 
+
+precision <- function(predictions, standard){
+  
+  assumed.positive <- sum(!is.na(predictions$class))
+  total.predictions <- length(predictions$class)
+  
+  return(assumed.positive/total.count)
+}
+
+#Fraction of relevant instances that are retrieved
+recall <- function(predictions, standard){
+  
+  assumed.positive <- sum(!is.na(predictions$class))
+  total.true <- length(standard$class)
+  
+  return(assumed.positive.total.true)
+}
+
+f.score <- function(predictions,standard){
+  
+  normalize <- normalizeTable(predictions,standard)[1]
+  predictions <- normalize[1]
+  standard <- normalize[2]
+  
+  prec<- precision(predictions, standard)
+  rec <- recall(predictions, standard) 
+
+  return (2*prec*rec/prec+rec)
+  }
+
+#####################################################################################################################
+# RESULTS
+
+score <- f.score(family.gs, my.gs)

@@ -35,12 +35,15 @@ for (i in 1:nrow(my.data)) {
   similarity[tmp_i, tmp_j] <- min(index$corrected, similarity[tmp_i, tmp_j])
 }
 
-similarity <- -log(similarity)
+#similarity <- -log(similarity)
 
 # Clustering algorithms
 #save.image("workspace.RData")
 # load("workspace.RData")
 # plot(c(similarity))
+
+#####################################################################################################################
+# Hierarchical clustering
 
 dij <- dist(scale(similarity, center = TRUE, scale = TRUE))
 clust <- hclust(dij, method = "average")
@@ -49,6 +52,27 @@ family <- cbind(proteins)
 family <- cbind(family, cutree(clust, 30))
 family <- as.data.frame(family)
 colnames(family) <- c("protein", "class")
+
+
+#####################################################################################################################
+# HIDDNE MARKOV MODEL
+library(igraph)
+library("MCL")
+
+# tmp <- similarity[1:10, 1:10]
+tmp <- similarity
+tmp <- round(as.matrix(tmp))
+tmp <- replace(tmp, tmp <= 0, 1)
+tmp <- replace(tmp, tmp != 1, 0)
+
+adjacency <- graph.adjacency(as.matrix(tmp), diag = TRUE)
+# plot(adjacency)
+hmm <- mcl(x = tmp, addLoops = TRUE, ESM = TRUE, allow1 = TRUE, expansion = 1, inflation = 1)
+family2 <- NULL
+family2 <- cbind(proteins)
+family2 <- cbind(family2, hmm$Cluster)
+family2 <- as.data.frame(family2)
+colnames(family2) <- c("protein", "class")
 
 #Make clusters groups from gold standard 
 

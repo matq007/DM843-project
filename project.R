@@ -43,7 +43,7 @@ dij <- dist(scale(similarity, center = TRUE, scale = TRUE))
 clust <- hclust(dij, method = "average")
 family <- NULL
 family <- cbind(proteins)
-family <- cbind(family, cutree(clust, 30))
+family <- cbind(family, cutree(clust, 300))
 family <- as.data.frame(family)
 colnames(family) <- c("protein", "class")
 
@@ -63,42 +63,38 @@ normalizeTable <- function(predictions, standard){
   for(f in unique(standard$class)){
     #get the proteins
     proteins <- standard[standard$class == f,]
-    
+     
     # get the predictions for the protein family
     proteins.clust <- predictions[predictions$protein %in% proteins$protein,] 
-    # get the most occouring cluster in prediction familty
-    biggest.cluster <-  sort(proteins.clust$class ,decreasing = TRUE)
     
-  
-    #Correct the label for the biggest one to match the gold standard, the rest assume are wron
-    predictions$class[(predictions$protein %in% proteins$protein) & (predictions$class == biggest.cluster$class)] <- proteins$class
-  
+    # get the most occouring cluster in prediction familty
+    biggest.cluster <- tail(names(sort(table(proteins.clust$class))), 1)
     
     #Mark the small clusters as beeing wrong in the predict
-    predictions$class[(predictions$protein %in% proteins$protein) & (predictions$class != biggest.cluster$class)] <- NA
+    predictions$class[(predictions$protein %in% proteins$protein) & (predictions$class != biggest.cluster)] <- NA
     
+    #Correct the label for the biggest one to match the gold standard, the rest assume are wron
+    predictions$class[(predictions$protein %in% proteins$protein) & (predictions$class == biggest.cluster) & !is.na(predictions$class)] <- proteins$class
+  
     }
   
-  return (c(predictions, stantard))
+  return (c(predictions, standard))
 } 
 
 precision <- function(predictions, standard){
   
-  gs.clusters <- c()
+  assumed.positive <- sum(!is.na(predictions$class))
+  total.predictions <- length(predictions$class)
   
-  #group standard in clusters
-  for(f in unique(standard$class))
-    gs.clusters <- c(gs.clusters, standard[standard$class == f,])
-
-  p.clusters <- c()
-  #group predictions in clusters
-  for(f in unique(predictions$class))
-    p.clusters <- c(p.clusters, predictions[predictions$class == f])
-  }
-
+  return(assumed.positive/total.count)
+}
 #Fraction of relevant instances that are retrieved
 recall <- function(predictions, standard){
-  #
+  
+  assumed.positive <- sum(!is.na(predictions$class))
+  total.true <- length(standard$class)
+  
+  return(assumed.positive.total.true)
 }
 
 f.score <- function(predictions,standard){

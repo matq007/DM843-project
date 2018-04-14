@@ -1,6 +1,3 @@
-
-install.package("fpc")
-
 # READ GOLD STANDARD
 gold.standard <- read.table("gold_standard.txt", header = FALSE, sep = "\t")
 colnames(gold.standard)<- c("protein","family")
@@ -49,7 +46,7 @@ dij <- dist(scale(similarity, center = TRUE, scale = TRUE))
 clust <- hclust(dij, method = "average")
 family <- NULL
 family <- cbind(proteins)
-family <- cbind(family, cutree(clust, 30))
+family <- cbind(family, cutree(clust, 300))
 family <- as.data.frame(family)
 colnames(family) <- c("protein", "class")
 
@@ -77,29 +74,66 @@ colnames(family2) <- c("protein", "class")
 #Make clusters groups from gold standard 
 
 #Compare results to golden standard on proteins we have 
-comparison <- merge(gold.standard, family, by="protein")
+comparison <- merge(my.gs, family, by="protein")
+colnames(comparison) <- c("protein","actuall_family", "predicted_family")
 
-measurePrecisionRecall <- function(predict, actual_labels){
-  precision <- sum(predict & actual_labels) / sum(predict)
-  recall <- sum(predict & actual_labels) / sum(actual_labels)
-  fmeasure <- 2 * precision * recall / (precision + recall)
+family.gs <- family[family$protein %in% my.gs$protein,]
+
+#Fraction of predictions that are relevant 
+# (hits that are clustered in the same cluster)/(all hits)
+normalizeTable <- function(predictions, standard){
   
-  cat('precision:  ')
-  cat(precision * 100)
-  cat('%')
-  cat('\n')
+  #for each protein family we know in the standard
+  for(f in unique(standard$class)){
+    #get the proteins
+    proteins <- standard[standard$class == f,]
+     
+    # get the predictions for the protein family
+    proteins.clust <- predictions[predictions$protein %in% proteins$protein,] 
+    
+    # get the most occouring cluster in prediction familty
+    biggest.cluster <- tail(names(sort(table(proteins.clust$class))), 1)
+    
+    #Mark the small clusters as beeing wrong in the predict
+    predictions$class[(predictions$protein %in% proteins$protein) & (predictions$class != biggest.cluster)] <- NA
+    
+    #Correct the label for the biggest one to match the gold standard, the rest assume are wron
+    predictions$class[(predictions$protein %in% proteins$protein) & (predictions$class == biggest.cluster) & !is.na(predictions$class)] <- proteins$class
   
-  cat('recall:     ')
-  cat(recall * 100)
-  cat('%')
-  cat('\n')
+    }
   
-  cat('f-measure:  ')
-  cat(fmeasure * 100)
-  cat('%')
-  cat('\n')
+  return (c(predictions, standard))
+} 
+
+precision <- function(predictions, standard){
+  
+  assumed.positive <- sum(!is.na(predictions$class))
+  total.predictions <- length(predictions$class)
+  
+  return(assumed.positive/total.count)
 }
-cluster.stats(family, gold.standard)
+#Fraction of relevant instances that are retrieved
+recall <- function(predictions, standard){
+  
+  assumed.positive <- sum(!is.na(predictions$class))
+  total.true <- length(standard$class)
+  
+  return(assumed.positive.total.true)
+}
+
+f.score <- function(predictions,standard){
+  
+  normalize <- normalizeTable(predictions,standard)[1]
+  predictions <- normalize[1]
+  standard <- normalize[2]
+  
+  prec<- precision(predictions, standard)
+  rec <- recall(predictions, standard) 
+
+  return (2*prec*rec/prec+rec)
+  }
+
+score <- f.score(family.gs, my.gs)
 
 #Spectral Clust
 # edges connecting different clusters should have low weigths

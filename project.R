@@ -49,14 +49,33 @@ my.result.hmm <- method_3(similarity, proteins)
 # Make clusters groups from gold standard 
 # Compare results to partial gold standard on the proteins we have 
 
-#test_range <- 1:length(proteins)
-test_range <- 100:101
-my.result.kmeans <- calculate_best_score(test_range, my.gs, similarity, proteins, method_1)
-my.result.hclust <- calculate_best_score(test_range, my.gs, similarity, proteins, method_2)
-my.result.hmm <- calculate_best_score(test_range, my.gs, similarity, proteins, method_3)
+result <- NULL
+my.result.hclust <- NULL
+my.result.hmm <- NULL
+test_range <- 50:300
+
+# K-MEANS
+for (i in test_range) {
+  family <- method_1(similarity, proteins, test_range)
+  tmp <- family[family$protein %in% my.gs$protein, ]
+  result[i] <- precision(tmp, my.gs)
+}
+
+# HCLUST
+for (i in test_range) {
+  family <- method_2(i, similarity, proteins)
+  tmp <- family[family$protein %in% my.gs$protein, ]
+  my.result.hclust[i] <- precision(tmp, my.gs)
+}
+
+# HMM
+for (i in test_range) {
+  family <- method_3(similarity, proteins)
+  tmp <- family[family$protein %in% my.gs$protein, ]
+  my.result.hmm[i] <- precision(tmp, my.gs)
+}
 
 my.result <- cbind(proteins)
-my.result <- cbind(my.result, result.kmeans)
 my.result <- cbind(my.result, result.hclust)
 my.result <- cbind(my.result, result.hmm)
 colnames(my.result) <- c("protein", "kmeans", "hclust", "hmm")

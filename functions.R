@@ -18,8 +18,7 @@ method_1 <- function(p_similarity, p_proteins, p_length) {
   
   p_similarity <- -log(p_similarity)
   clusters <- NULL
-  clusters[1] <- 0
-  for (i in 2:p_length) {
+  for (i in p_length) {
     clusters[i] <- kmeans(p_similarity, i, nstart = 10)$tot.withinss
   }
   
@@ -117,7 +116,6 @@ precision <- function(predictions, standard){
   total.predictions <- length(predictions)
   
   return(as.double(assumed.positive / total.predictions))
-  #return (1)
 }
 
 #Fraction of relevant instances that are retrieved
@@ -141,15 +139,3 @@ f.score <- function(predictions,standard){
   return (2*prec*rec/prec+rec)
 }
 
-calculate_best_score <- function(p_test_range, p_gs, p_similarity, p_proteins, p_method) {
-  
-  result <- NULL
-  
-  for (i in p_test_range) {
-    family <- p_method(i, p_similarity, p_proteins)
-    tmp <- family[family$protein %in% p_gs$protein, ]
-    result[i] <- precision(tmp, p_gs)
-  }
-  
-  return (result)
-}

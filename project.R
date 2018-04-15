@@ -1,5 +1,5 @@
 
-install.package("fpc")
+# install.package("fpc")
 
 # READ GOLD STANDARD
 gold.standard <- read.table("gold_standard.txt", header = FALSE, sep = "\t")
@@ -103,32 +103,46 @@ make.affinity <- function(S, n.neighboors=2) {
 A <- make.affinity(S, 3)
 
 # egree of the respective vertex and all other positions are zero
+
 D <- diag(apply(A, 1, sum)) # sum rows
 D[1:8,1:8]
 
 #unnormalized graph
 U = D-A
-L <- diag(nrow(my.data)) - solve(D) %*% A  # simple Laplacian
-round(L[1:12,1:12],1)
-k   <- 2
+round(U[1:12,1:12],1)
+
+k   <- 500
 evL <- eigen(U, symmetric=TRUE)
 Z   <- evL$vectors[,(ncol(evL$vectors)-k+1):ncol(evL$vectors)]
-plot(Z, col=obj$classes, pch=20) # notice that all 50 points,
+plot(Z, col=family$class, pch=20) # notice that all 50 points,
                                  # of each cluster, are on top of each other
 
 # find the apropoiate clusters
 library(stats)
-km <- kmeans(Z, centers=k, nstart=5)
+km <- kmeans(Z, k)
+library(ggplot2)
+plot(similarity,col=km$cluster, pch=20)
 plot(my.data, col=km$cluster)    
+
 signif(evL$values,2) # eigenvalues are in decreasing order
-plot(1:10, rev(evL$values)[1:10], log="y")
+plot(rev(evL$values), log="y")
 abline(v=2.25, col="red", lty=2) # there are just 2 clusters as expected
 
 ## plot it
+install.packages("yaml")
+install.packages("kknn")
 install.packages("kernlab")
 library(kernlab)
+source("https://bioconductor.org/biocLite.R")
+biocLite("SamSPECTRAL")
+library(SamSPECTRAL)
+set.seed(123)
+
+output <- SamSPECTRAL(similarity, dimension=c(1,2,3),
+                      normal.sigma = 500, separation.factor = 0.6) 
 
 sc <- specc(my.data, centers=2)
-plot(my.data, col=sc, pch=4)            # estimated classes (x)
-points(my.data, col=c(my.data$protein1, my.data$protein2), pch=5) # true classes (<>)
+
+plot(similarity, col = sc, centers = 2) # estimated classes (x)
+points(similarity, pch=(29 - 2 * sc)) # true classes (<>)
 

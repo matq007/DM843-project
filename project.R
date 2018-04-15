@@ -77,6 +77,40 @@ measurePrecisionRecall <- function(predict, actual_labels){
 }
 cluster.stats(family, gold.standard)
 
+# k means clustering
+set.seed(123)
+results <- kmeans(similarity, 550)
+table(family$class, results$cluster)
+# run multiple time to extract similar clusters
+bestfi <- NULL
+for (i in 1:100) {
+  set.seed(123)
+  results <- kmeans(similarity, 550)
+  table(family$class, results$cluster)
+  if(family$class[i] == results$cluster[i])
+  {
+    bestfit <- table(family$class, results$cluster)
+  }
+}
+# function to compute total within-cluster sum of square 
+wss <- function(k) {
+  kmeans(similarity, k, nstart = 10 )$tot.withinss
+}
+# Compute and plot wss for k = 1 to k = 15
+k.values <- 1:550
+
+# extract wss for 2-550 clusters
+library(factoextra) #optimal number of clsuters
+fviz_nbclust(similarity, kmeans, method = "wss")
+
+plot(k.values, wss_values,
+     type="b", pch = 19, frame = FALSE, 
+     xlab="Number of clusters K",
+     ylab="Total within-clusters sum of squares")
+results<- kmeans(similarity, centers=550, nstart = 25)
+table(family$class, results$cluster) # check howmay clusters are matching
+
+
 #Spectral Clust
 # edges connecting different clusters should have low weigths
 S <- similarity
